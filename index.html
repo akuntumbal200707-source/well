@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Spin Final Fix</title>
+
+<style>
+body{margin:0;font-family:Arial;text-align:center;background:transparent}
+.container{width:260px;margin:15px auto;padding:10px;border-radius:12px}
+.header{color:white;font-size:12px}
+
+.viewport{
+  width:240px;height:60px;overflow:hidden;
+  border:2px solid white;border-radius:8px;
+  margin:10px auto;position:relative
+}
+
+.arrow{
+  position:absolute;top:-8px;left:50%;
+  transform:translateX(-50%);
+  color:yellow;font-size:12px;z-index:10
+}
+
+.track{display:flex;height:60px}
+.item{
+  width:60px;height:60px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center
+}
+.item img{width:48px;height:48px}
+
+.zonk{background:#444}
+.elmaja{background:purple}
+.lochness{background:#005b9f}
+.sctumbal{background:limegreen}
+.laba{background:orange}
+.mitos{background:red}
+
+.stop{box-shadow:inset 0 0 0 3px white,0 0 12px gold}
+.spin-btn{
+  width:55px;height:55px;border-radius:50%;
+  border:2px solid white;background:rgba(255,255,255,.15)
+}
+.result{margin-top:6px;min-height:60px}
+.result img{width:32px;height:32px}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="header">💰 5 Coin untuk 1 Putaran</div>
+
+  <div class="viewport">
+    <div class="arrow">▼</div>
+    <div class="track" id="track"></div>
+  </div>
+
+  <button class="spin-btn" onclick="spin()">SPIN</button>
+  <div class="result" id="result"></div>
+</div>
+
+<!-- AUDIO -->
+<audio id="spinBg" src="soundmuter.mp3" loop></audio>
+<audio id="elmajaAudio" src="elmaja.mp3"></audio>
+<audio id="lochnessAudio" src="lochness.mp3"></audio>
+<audio id="sctumbalAudio" src="sctumbal.mp3"></audio>
+<audio id="baturuinAudio" src="baturuin.mp3"></audio>
+<audio id="zonkAudio" src="zonk.mp3"></audio>
+<audio id="mitosAudio" src="mitos.mp3"></audio>
+
+<script>
+// volume
+document.querySelectorAll("audio").forEach(a=>a.volume=0.85);
+const spinBg=document.getElementById("spinBg");
+spinBg.volume=1.0; // muter PALING KERAS
+
+const visual=[
+  {id:"X",cls:"elmaja",img:"maja.png",audio:"elmajaAudio"},
+  {id:"A",cls:"zonk",img:"zonk.png",audio:"zonkAudio"},
+  {id:"LN",cls:"lochness",img:"lochness.png",audio:"lochnessAudio"},
+  {id:"ST",cls:"sctumbal",img:"sctumbal.png",audio:"sctumbalAudio"},
+  {id:"BR",cls:"laba",img:"baturuin.png",audio:"baturuinAudio"},
+  {id:"MT",cls:"mitos",img:"mitos.png",audio:"mitosAudio"}
+];
+
+const winPool=[
+  {id:"ST",w:1},
+  {id:"BR",w:1},
+  {id:"MT",w:100},
+  {id:"A",w:898}
+];
+
+const track=document.getElementById("track");
+let data=[];
+
+for(let i=0;i<150;i++){
+  const h=visual[i%visual.length];
+  data.push(h);
+  if(h.id!=="A"){
+    data.push({id:"A",cls:"zonk",img:"zonk.png",audio:"zonkAudio"});
+    data.push({id:"A",cls:"zonk",img:"zonk.png",audio:"zonkAudio"});
+  }
+}
+
+data.forEach(h=>{
+  const d=document.createElement("div");
+  d.className=`item ${h.cls}`;
+  d.dataset.audio=h.audio;
+  d.innerHTML=`<img src="${h.img}">`;
+  track.appendChild(d);
+});
+
+function stopAllSound(){
+  document.querySelectorAll("audio").forEach(a=>{
+    a.pause();a.currentTime=0;
+  });
+}
+
+function playSound(id){
+  setTimeout(()=>{
+    const a=document.getElementById(id);
+    if(a){a.currentTime=0;a.play().catch(()=>{})}
+  },300); // delay 0.3 detik
+}
+
+function pick(){
+  let pool=[];
+  winPool.forEach(h=>{for(let i=0;i<h.w;i++)pool.push(h.id)});
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function spin(){
+  stopAllSound();
+  spinBg.play().catch(()=>{});
+
+  document.querySelectorAll(".item").forEach(i=>i.classList.remove("stop"));
+  document.getElementById("result").innerHTML="";
+
+  const winner=pick();
+  const targets=data.map((h,i)=>h.id===winner?i:null).filter(i=>i!==null);
+  const index=targets[Math.floor(Math.random()*targets.length)];
+
+  track.style.transition="transform 8s cubic-bezier(.05,.9,.15,1)";
+  track.style.transform=`translateX(${-(index*60)+90}px)`;
+
+  setTimeout(()=>{
+    spinBg.pause();spinBg.currentTime=0;
+
+    const items=document.querySelectorAll(".item");
+    let closest=0,dist=9999;
+    const arrowX=document.querySelector(".arrow").getBoundingClientRect().left;
+
+    items.forEach((it,i)=>{
+      const d=Math.abs(it.getBoundingClientRect().left-arrowX);
+      if(d<dist){dist=d;closest=i;}
+    });
+
+    items[closest].classList.add("stop");
+    document.getElementById("result")
+      .appendChild(items[closest].querySelector("img").cloneNode());
+
+    playSound(items[closest].dataset.audio);
+  },8000);
+}
+</script>
+
+</body>
+</html>
